@@ -1,0 +1,6 @@
+{
+  "name": "Karnataka RTO Document Management System",
+  "description": "Private, single-user document management and paperwork tracking system for Karnataka RTO agent and showroom operations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

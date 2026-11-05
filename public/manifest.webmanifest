@@ -1,0 +1,17 @@
+{
+  "name": "Karnataka RTO Document System",
+  "short_name": "KA-RTO Docs",
+  "description": "Personal Karnataka RTO Paperwork & Showroom Document Management System",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#0284c7",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
