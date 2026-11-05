@@ -76,6 +76,11 @@ apiRouter.get('/auth/status', (req: Request, res: Response) => {
   let authenticated = false;
   let username: string | undefined;
 
+  const admin = db.prepare('SELECT username FROM admin_auth WHERE id = 1').get() as any;
+  if (admin) {
+    username = admin.username;
+  }
+
   const authHeader = req.headers.authorization;
   let token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : (req.headers['x-auth-token'] as string);
   if (!token && req.query?.token) {
@@ -85,21 +90,32 @@ apiRouter.get('/auth/status', (req: Request, res: Response) => {
   if (token) {
     const session = db.prepare('SELECT * FROM admin_sessions WHERE token = ?').get(token) as any;
     if (session && new Date(session.expires_at) > new Date()) {
-      const admin = db.prepare('SELECT username FROM admin_auth WHERE id = 1').get() as any;
-      if (admin) {
-        authenticated = true;
-        username = admin.username;
-      }
+      authenticated = true;
     }
   }
 
   res.json({ initialized, authenticated, username });
 });
 
+apiRouter.get('/auth/setup', (_req: Request, res: Response) => {
+  res.json({ initialized: isInitialized() });
+});
+
 apiRouter.post('/auth/setup', async (req: Request, res: Response) => {
   const { username, password } = req.body;
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password are required.' });
+  }
+
+  if (isInitialized()) {
+    // If already initialized, seamlessly authenticate if credentials match
+    const auth = await authenticateAdmin(username, password, req.ip, req.headers['user-agent']);
+    if (auth.success) {
+      return res.json({ success: true, token: auth.token });
+    }
+    return res.status(400).json({
+      error: 'System administrator is already configured. Please use Unlock Dashboard with your administrator password.'
+    });
   }
 
   const result = await setupAdmin(username, password);

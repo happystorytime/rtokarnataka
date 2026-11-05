@@ -1,38 +1,50 @@
-import React, { useState } from 'react';
-import { ShieldCheck, Lock, User, AlertCircle, KeyRound, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShieldCheck, Lock, User, AlertCircle, KeyRound, CheckCircle2, ArrowRight } from 'lucide-react';
 import { api, setStoredToken } from '../api';
 
 interface AuthModalProps {
   isInitialized: boolean;
+  defaultUsername?: string;
   onSuccess: (username: string) => void;
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isInitialized, onSuccess }) => {
-  const [username, setUsername] = useState('admin');
+export const AuthModal: React.FC<AuthModalProps> = ({ isInitialized, defaultUsername, onSuccess }) => {
+  const [mode, setMode] = useState<'login' | 'setup'>(isInitialized ? 'login' : 'setup');
+  const [username, setUsername] = useState(defaultUsername || (isInitialized ? 'virat' : ''));
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    setMode(isInitialized ? 'login' : 'setup');
+    if (defaultUsername) {
+      setUsername(defaultUsername);
+    }
+  }, [isInitialized, defaultUsername]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!username.trim()) {
+    const cleanUser = username.trim();
+    const cleanPass = password.trim();
+
+    if (!cleanUser) {
       setError('Username is required.');
       return;
     }
-    if (!password.trim()) {
+    if (!cleanPass) {
       setError('Password is required.');
       return;
     }
 
-    if (!isInitialized) {
-      if (password.length < 8) {
+    if (mode === 'setup') {
+      if (cleanPass.length < 8) {
         setError('Password must be at least 8 characters long.');
         return;
       }
-      if (password !== confirmPassword) {
+      if (cleanPass !== confirmPassword.trim()) {
         setError('Passwords do not match.');
         return;
       }
@@ -40,17 +52,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isInitialized, onSuccess }
 
     setLoading(true);
     try {
-      if (!isInitialized) {
-        const res = await api.setupAdmin(username.trim(), password.trim());
+      if (mode === 'setup') {
+        const res = await api.setupAdmin(cleanUser, cleanPass);
         setStoredToken(res.token);
-        onSuccess(username.trim());
+        onSuccess(cleanUser);
       } else {
-        const res = await api.loginAdmin(username.trim(), password.trim());
+        const res = await api.loginAdmin(cleanUser, cleanPass);
         setStoredToken(res.token);
-        onSuccess(username.trim());
+        onSuccess(cleanUser);
       }
     } catch (err: any) {
-      setError(err.message || 'Authentication failed. Please verify credentials.');
+      const msg = err.message || 'Authentication failed. Please verify credentials.';
+      if (msg.toLowerCase().includes('already configured') || msg.toLowerCase().includes('already initialized')) {
+        // Automatically switch to login mode and pre-fill username
+        setMode('login');
+        setError('Administrator is already configured. Please enter your master password to unlock.');
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -62,25 +81,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isInitialized, onSuccess }
         {/* Header Badge */}
         <div className="flex flex-col items-center text-center mb-6">
           <div className="w-14 h-14 rounded-2xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 mb-4 shadow-lg shadow-sky-500/10">
-            {isInitialized ? <Lock className="w-7 h-7" /> : <ShieldCheck className="w-7 h-7" />}
+            {mode === 'login' ? <Lock className="w-7 h-7" /> : <ShieldCheck className="w-7 h-7" />}
           </div>
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-            {isInitialized ? 'Administrator Access' : 'Initial Security Setup'}
+            {mode === 'login' ? 'Administrator Access' : 'Initial Security Setup'}
           </h2>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            {isInitialized
+            {mode === 'login'
               ? 'Karnataka RTO Document & Paperwork Management System'
               : 'Configure your single-user master administrator credentials'}
           </p>
         </div>
 
         {/* Security Notice */}
-        <div className="mb-6 p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-start gap-2.5 text-xs text-slate-300">
+        <div className="mb-5 p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-start gap-2.5 text-xs text-slate-300">
           <KeyRound className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
           <span>
-            {isInitialized
-              ? 'Private single-owner system. Protected by session tokens and brute-force rate-limiting.'
-              : 'This application is restricted to a single owner. Set your master username and secure password.'}
+            {mode === 'login'
+              ? 'Private single-owner system. Protected by secure session tokens and lockout limits.'
+              : 'Set your master administrator username and secure password (minimum 8 characters).'}
           </span>
         </div>
 
@@ -106,7 +125,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isInitialized, onSuccess }
                 required
                 autoComplete="username"
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
-                placeholder="e.g. admin or rto_owner"
+                placeholder="Enter username (e.g. virat)"
               />
             </div>
           </div>
@@ -122,14 +141,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isInitialized, onSuccess }
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                autoComplete={isInitialized ? 'current-password' : 'new-password'}
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
-                placeholder={isInitialized ? 'Enter master password' : 'Min 8 characters'}
+                placeholder={mode === 'login' ? 'Enter master password' : 'Min 8 characters'}
               />
             </div>
           </div>
 
-          {!isInitialized && (
+          {mode === 'setup' && (
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
                 Confirm Master Password
@@ -156,7 +175,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isInitialized, onSuccess }
           >
             {loading ? (
               <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : isInitialized ? (
+            ) : mode === 'login' ? (
               <>
                 <Lock className="w-4 h-4" />
                 Unlock Dashboard
@@ -170,7 +189,34 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isInitialized, onSuccess }
           </button>
         </form>
 
-        <div className="mt-6 text-center">
+        {/* Mode switcher link */}
+        <div className="mt-5 text-center">
+          {mode === 'setup' ? (
+            <button
+              type="button"
+              onClick={() => {
+                setMode('login');
+                setError(null);
+              }}
+              className="text-xs text-sky-400 hover:text-sky-300 font-medium inline-flex items-center gap-1 cursor-pointer"
+            >
+              Already set up? Log in with master credentials <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setMode('setup');
+                setError(null);
+              }}
+              className="text-xs text-slate-500 hover:text-slate-400 font-medium cursor-pointer"
+            >
+              Configure or re-initialize administrator
+            </button>
+          )}
+        </div>
+
+        <div className="mt-6 text-center border-t border-slate-800 pt-3">
           <p className="text-[11px] text-slate-500">
             Karnataka RTO Agent & Showroom Paperwork Tracking • Private Deployment
           </p>

@@ -39,8 +39,8 @@ export default function App() {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | undefined>();
   const [selectedCaseId, setSelectedCaseId] = useState<string | undefined>();
 
-  // Verify auth on mount
-  const checkAuth = async () => {
+  // Verify auth on mount with retry handling for dev server startup
+  const checkAuth = async (retries = 3) => {
     try {
       const res = await api.getAuthStatus();
       setAuthInitialized(res.initialized);
@@ -52,7 +52,12 @@ export default function App() {
       }
     } catch (err) {
       console.error('Failed to check auth status:', err);
-      setAuthInitialized(false);
+      if (retries > 0) {
+        setTimeout(() => checkAuth(retries - 1), 1000);
+        return;
+      }
+      // If server took longer to connect, default to initialized so user sees Unlock Login
+      setAuthInitialized(true);
       setAuthenticated(false);
     }
   };
@@ -135,10 +140,25 @@ export default function App() {
     );
   }
 
+  if (authInitialized === null) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-3 border-sky-500/30 border-t-sky-500 rounded-full animate-spin" />
+          <p className="text-xs text-slate-400 font-medium">Connecting to Karnataka RTO Database...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!authenticated) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100">
-        <AuthModal isInitialized={authInitialized} onSuccess={handleLoginSuccess} />
+        <AuthModal
+          isInitialized={authInitialized}
+          defaultUsername={adminUsername}
+          onSuccess={handleLoginSuccess}
+        />
       </div>
     );
   }
