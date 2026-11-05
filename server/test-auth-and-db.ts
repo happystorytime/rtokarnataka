@@ -1,13 +1,14 @@
-import { db, initializeDatabase, createBackup } from './db.js';
-import {
-  isInitialized,
-  setupAdmin,
-  authenticateAdmin,
-  updatePassword
-} from './auth.js';
+import path from 'path';
 import fs from 'fs';
 
+// Force tests to run on isolated test database
+const TEST_DB_PATH = path.join(process.cwd(), 'data', 'test_rto.db');
+process.env.DATABASE_PATH = TEST_DB_PATH;
+
 async function runTests() {
+  const { db, initializeDatabase, createBackup } = await import('./db.ts');
+  const { isInitialized, setupAdmin, authenticateAdmin, updatePassword } = await import('./auth.ts');
+
   console.log('--- Starting Automated Test Suite: Karnataka RTO Document Management System ---');
   let passed = 0;
   let failed = 0;

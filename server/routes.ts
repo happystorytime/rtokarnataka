@@ -1,17 +1,18 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
+import type { Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { db, logActivity, createBackup, UPLOADS_DIR, BACKUPS_DIR } from './db.js';
+import { db, logActivity, createBackup, UPLOADS_DIR, BACKUPS_DIR } from './db.ts';
 import {
   isInitialized,
   setupAdmin,
   authenticateAdmin,
   requireAuth,
   logoutAdmin,
-  updatePassword,
-  AuthenticatedRequest
-} from './auth.js';
+  updatePassword
+} from './auth.ts';
+import type { AuthenticatedRequest } from './auth.ts';
 
 export const apiRouter = express.Router();
 

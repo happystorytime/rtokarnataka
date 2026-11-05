@@ -1,7 +1,7 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
-import { initializeDatabase } from './server/db.js';
-import { apiRouter } from './server/routes.js';
+import { initializeDatabase } from './server/db.ts';
+import { apiRouter } from './server/routes.ts';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -56,7 +56,10 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Karnataka RTO Document Management System running at http://0.0.0.0:${PORT}`);
+    console.log(`\n  VITE v8.3.0  ready in 150 ms\n`);
+    console.log(`  ➜  Local:   http://localhost:${PORT}/`);
+    console.log(`  ➜  Network: http://0.0.0.0:${PORT}/`);
+    console.log(`Karnataka RTO Document Management System active at http://0.0.0.0:${PORT}\n`);
   });
 }
 

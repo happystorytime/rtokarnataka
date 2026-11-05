@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { Request, Response, NextFunction } from 'express';
-import { db, logActivity } from './db.js';
+import type { Request, Response, NextFunction } from 'express';
+import { db, logActivity } from './db.ts';
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const MAX_FAILED_ATTEMPTS = 5;
