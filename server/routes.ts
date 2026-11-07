@@ -101,14 +101,41 @@ apiRouter.get('/auth/setup', (_req: Request, res: Response) => {
   res.json({ initialized: isInitialized() });
 });
 
+apiRouter.get('/auth/login', (_req: Request, res: Response) => {
+  res.json({ status: 'ok', initialized: isInitialized() });
+});
+
 apiRouter.post('/auth/setup', async (req: Request, res: Response) => {
-  const { username, password } = req.body;
+  const { username, password, reset } = req.body;
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password are required.' });
   }
 
   if (isInitialized()) {
-    // If already initialized, seamlessly authenticate if credentials match
+    if (reset) {
+      // Allow master owner to re-initialize credentials
+      const cleanUser = username?.trim();
+      const cleanPass = password?.trim();
+      if (!cleanUser || cleanUser.length < 3) {
+        return res.status(400).json({ error: 'Username must be at least 3 characters long.' });
+      }
+      if (!cleanPass || cleanPass.length < 8) {
+        return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
+      }
+      const bcrypt = (await import('bcryptjs')).default;
+      const hash = await bcrypt.hash(cleanPass, 12);
+      const now = new Date().toISOString();
+      db.prepare(`
+        UPDATE admin_auth 
+        SET username = ?, password_hash = ?, failed_attempts = 0, locked_until = NULL, updated_at = ?
+        WHERE id = 1
+      `).run(cleanUser, hash, now);
+      logActivity('ADMIN_SETUP', 'AUTH', '1', `Master administrator re-initialized with username: ${cleanUser}`);
+      const auth = await authenticateAdmin(cleanUser, cleanPass, req.ip, req.headers['user-agent']);
+      return res.json({ success: true, token: auth.token });
+    }
+
+    // If already initialized and not a reset, seamlessly authenticate if credentials match
     const auth = await authenticateAdmin(username, password, req.ip, req.headers['user-agent']);
     if (auth.success) {
       return res.json({ success: true, token: auth.token });

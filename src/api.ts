@@ -42,7 +42,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers
   });
 
-  if (response.status === 401) {
+  // Only trigger session expiration for authenticated routes (not login/setup attempts)
+  if (response.status === 401 && !path.includes('/auth/login') && !path.includes('/auth/setup')) {
     clearStoredToken();
     window.dispatchEvent(new Event('auth:unauthorized'));
     throw new Error('Session expired or unauthorized. Please log in.');
@@ -67,10 +68,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 export const api = {
   // Authentication
   getAuthStatus: () => request<{ initialized: boolean; authenticated: boolean; username?: string }>('/api/auth/status'),
-  setupAdmin: (username: string, password: string) =>
+  setupAdmin: (username: string, password: string, reset?: boolean) =>
     request<{ success: boolean; token: string }>('/api/auth/setup', {
       method: 'POST',
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ username, password, reset })
     }),
   loginAdmin: (username: string, password: string) =>
     request<{ success: boolean; token: string }>('/api/auth/login', {

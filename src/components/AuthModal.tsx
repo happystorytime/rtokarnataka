@@ -53,7 +53,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isInitialized, defaultUser
     setLoading(true);
     try {
       if (mode === 'setup') {
-        const res = await api.setupAdmin(cleanUser, cleanPass);
+        const res = await api.setupAdmin(cleanUser, cleanPass, isInitialized);
         setStoredToken(res.token);
         onSuccess(cleanUser);
       } else {
@@ -63,8 +63,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isInitialized, defaultUser
       }
     } catch (err: any) {
       const msg = err.message || 'Authentication failed. Please verify credentials.';
-      if (msg.toLowerCase().includes('already configured') || msg.toLowerCase().includes('already initialized')) {
-        // Automatically switch to login mode and pre-fill username
+      if (msg.toLowerCase().includes('not yet initialized') || msg.toLowerCase().includes('complete initial setup')) {
+        setMode('setup');
+        setError('System is not yet initialized. Please configure your master administrator credentials below.');
+      } else if (msg.toLowerCase().includes('already configured') || msg.toLowerCase().includes('already initialized')) {
         setMode('login');
         setError('Administrator is already configured. Please enter your master password to unlock.');
       } else {

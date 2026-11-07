@@ -31,11 +31,12 @@ async function startServer() {
     next();
   });
 
-  // Mount API endpoints
+  // Mount API endpoints on /api AND / for complete path compatibility
   app.use('/api', apiRouter);
+  app.use(apiRouter);
 
   // Catch unmatched API routes and return structured JSON (prevent Vite SPA HTML fallthrough)
-  app.use('/api', (req, res) => {
+  app.use(['/api', '/auth'], (req, res) => {
     res.status(404).json({ error: `API route ${req.method} ${req.originalUrl} not found.` });
   });
 
